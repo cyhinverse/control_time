@@ -26,6 +26,8 @@ import {
   ChevronRight,
   Repeat,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { getSettings, type AppSettings } from "@/lib/settings";
 
@@ -161,44 +163,41 @@ export function CalendarView({ events: rawEvents }: CalendarViewProps) {
 
         <div className="flex items-center gap-3">
           {/* Navigation */}
-          <div className="flex items-center bg-muted/50 rounded-lg p-1">
-            <button
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate("prev")}
-              className="size-8 rounded-md hover:bg-background flex items-center justify-center transition-colors"
+              className="size-8"
             >
               <ChevronLeft className="size-4" />
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => navigate("today")}
-              className="px-3 py-1.5 text-sm font-medium hover:bg-background rounded-md transition-colors"
+              className="px-3"
             >
               Today
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => navigate("next")}
-              className="size-8 rounded-md hover:bg-background flex items-center justify-center transition-colors"
+              className="size-8"
             >
               <ChevronRight className="size-4" />
-            </button>
+            </Button>
           </div>
 
           {/* View Switcher */}
-          <div className="flex items-center bg-muted/50 rounded-lg p-1">
-            {(["day", "week", "month"] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
-                  view === v
-                    ? "bg-violet-500 text-white shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-background"
-                )}
-              >
-                {v.charAt(0).toUpperCase() + v.slice(1)}
-              </button>
-            ))}
-          </div>
+          <Tabs value={view} onValueChange={(v) => setView(v as ViewType)}>
+            <TabsList>
+              <TabsTrigger value="day">Day</TabsTrigger>
+              <TabsTrigger value="week">Week</TabsTrigger>
+              <TabsTrigger value="month">Month</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 

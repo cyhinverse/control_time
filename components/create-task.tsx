@@ -14,6 +14,14 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import * as chrono from "chrono-node";
 
@@ -25,7 +33,7 @@ export function CreateTask() {
   const [parsedDate, setParsedDate] = useState<Date | null>(null);
   const [priority, setPriority] = useState<string>("MEDIUM");
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState("09:00");
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLFormElement>(null);
@@ -34,6 +42,13 @@ export function CreateTask() {
   // Handle click outside to close
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+
+      // Don't close if clicking inside popover content
+      if (target.closest("[data-radix-popper-content-wrapper]")) {
+        return;
+      }
+
       if (
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
@@ -92,6 +107,7 @@ export function CreateTask() {
     const today = new Date();
     today.setHours(9, 0, 0, 0);
     setParsedDate(today);
+    setSelectedDate(today);
   }
 
   function setTomorrow() {
@@ -99,21 +115,22 @@ export function CreateTask() {
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(9, 0, 0, 0);
     setParsedDate(tomorrow);
+    setSelectedDate(tomorrow);
   }
 
-  function applyCustomDateTime() {
+  // Auto-apply date/time when selectedDate or selectedTime changes
+  useEffect(() => {
     if (selectedDate) {
       const [hours, minutes] = selectedTime.split(":").map(Number);
       const date = new Date(selectedDate);
-      date.setHours(hours, minutes, 0, 0);
+      date.setHours(hours || 9, minutes || 0, 0, 0);
       setParsedDate(date);
-      setShowDatePicker(false);
     }
-  }
+  }, [selectedDate, selectedTime]);
 
   function clearDateTime() {
     setParsedDate(null);
-    setSelectedDate("");
+    setSelectedDate(undefined);
     setSelectedTime("09:00");
   }
 
@@ -278,110 +295,163 @@ export function CreateTask() {
               Tomorrow
             </motion.button>
 
-            {/* Custom Date/Time Picker */}
-            <motion.button
-              type="button"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs",
-                "transition-colors",
-                showDatePicker
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <CalendarDays className="size-3" />
-              Pick date
-            </motion.button>
+            {/* Custom Date/Time Picker - Popover */}
+            <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+              <PopoverTrigger asChild>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs",
+                    "transition-colors",
+                    showDatePicker || selectedDate
+                      ? "text-primary bg-primary/10"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <CalendarDays className="size-3" />
+                  {selectedDate
+                    ? selectedDate.toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : "Pick date"}
+                </motion.button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0"
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                <CalendarPicker
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    if (date) {
+                      setShowDatePicker(false);
+                    }
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {/* Time Picker - Separate Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={cn(
+                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs",
+                    "transition-colors",
+                    "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  <Clock className="size-3" />
+                  {selectedTime}
+                </motion.button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-48 p-2"
+                align="start"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      "09:00",
+                      "10:00",
+                      "11:00",
+                      "12:00",
+                      "14:00",
+                      "15:00",
+                      "16:00",
+                      "17:00",
+                    ].map((time) => (
+                      <Button
+                        key={time}
+                        type="button"
+                        variant={selectedTime === time ? "default" : "ghost"}
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => setSelectedTime(time)}
+                      >
+                        {time}
+                      </Button>
+                    ))}
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder="HH:MM"
+                    value={selectedTime}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (
+                        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val) ||
+                        val.length <= 5
+                      ) {
+                        setSelectedTime(val);
+                      }
+                    }}
+                    className="text-xs h-8"
+                  />
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Clear Date Button */}
+            {selectedDate && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={() => {
+                  setSelectedDate(undefined);
+                  setParsedDate(null);
+                }}
+                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <X className="size-3" />
+              </motion.button>
+            )}
 
             <div className="h-4 w-px bg-border mx-1" />
 
-            {priorityOptions.map((opt, index) => (
-              <motion.button
-                key={opt.value}
-                type="button"
-                onClick={() => setPriority(opt.value)}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className={cn(
-                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs",
-                  "transition-colors",
-                  priority === opt.value
-                    ? opt.color
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
+            {/* Priority Toggle Group */}
+            <ToggleGroup
+              type="single"
+              value={priority}
+              onValueChange={(value) => value && setPriority(value)}
+              className="gap-0.5"
+            >
+              <ToggleGroupItem
+                value="HIGH"
+                size="sm"
+                className="gap-1 text-xs h-7 px-2 data-[state=on]:text-red-500 data-[state=on]:bg-red-500/10"
               >
                 <Flag className="size-3" />
-                {opt.label}
-              </motion.button>
-            ))}
-
-            <div className="flex-1" />
-
-            <span className="text-[10px] text-muted-foreground">
-              Supports natural language
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Date/Time Picker Panel */}
-      <AnimatePresence>
-        {showDatePicker && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -10, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center gap-3 px-3 py-2.5 bg-muted/30 rounded-lg border border-border overflow-hidden"
-          >
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground">Date:</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="text-xs px-2 py-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground">Time:</label>
-              <input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-                className="text-xs px-2 py-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <motion.button
-              type="button"
-              onClick={applyCustomDateTime}
-              disabled={!selectedDate}
-              whileHover={{ scale: selectedDate ? 1.05 : 1 }}
-              whileTap={{ scale: selectedDate ? 0.95 : 1 }}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded font-medium transition-colors",
-                selectedDate
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              Apply
-            </motion.button>
-            <motion.button
-              type="button"
-              onClick={() => setShowDatePicker(false)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="text-xs px-2 py-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted"
-            >
-              Cancel
-            </motion.button>
+                High
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="MEDIUM"
+                size="sm"
+                className="gap-1 text-xs h-7 px-2 data-[state=on]:text-orange-500 data-[state=on]:bg-orange-500/10"
+              >
+                <Flag className="size-3" />
+                Medium
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="LOW"
+                size="sm"
+                className="gap-1 text-xs h-7 px-2 data-[state=on]:text-blue-500 data-[state=on]:bg-blue-500/10"
+              >
+                <Flag className="size-3" />
+                Low
+              </ToggleGroupItem>
+            </ToggleGroup>
           </motion.div>
         )}
       </AnimatePresence>

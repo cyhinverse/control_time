@@ -24,44 +24,39 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/components/settings-provider";
 import { playCompletionSound, defaultSettings } from "@/lib/settings";
 
-// Toggle Switch Component
-function Toggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative h-6 w-11 rounded-full transition-colors",
-        checked ? "bg-primary" : "bg-muted"
-      )}
-    >
-      <span
-        className={cn(
-          "absolute left-0.5 top-0.5 size-5 rounded-full bg-white transition-transform shadow-sm",
-          checked && "translate-x-5"
-        )}
-      />
-    </button>
-  );
-}
-
 // Setting Item Component
 function SettingItem({
+  id,
   title,
   description,
   children,
 }: {
+  id?: string;
   title: string;
   description: string;
   children: React.ReactNode;
@@ -69,7 +64,9 @@ function SettingItem({
   return (
     <div className="flex items-center justify-between py-3">
       <div className="space-y-0.5">
-        <p className="text-sm font-medium">{title}</p>
+        <Label htmlFor={id} className="text-sm font-medium cursor-pointer">
+          {title}
+        </Label>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       {children}
@@ -124,14 +121,12 @@ export default function SettingsPage() {
 
   // Reset all settings to default
   const resetSettings = () => {
-    if (confirm("Reset all settings to default? This cannot be undone.")) {
-      Object.keys(defaultSettings).forEach((key) => {
-        updateSetting(
-          key as keyof typeof settings,
-          defaultSettings[key as keyof typeof defaultSettings]
-        );
-      });
-    }
+    Object.keys(defaultSettings).forEach((key) => {
+      updateSetting(
+        key as keyof typeof settings,
+        defaultSettings[key as keyof typeof defaultSettings]
+      );
+    });
   };
 
   if (!mounted) return null;
@@ -173,16 +168,20 @@ export default function SettingsPage() {
             {/* Theme Selector */}
             <div>
               <label className="text-sm font-medium mb-2 block">Theme</label>
-              <div className="grid grid-cols-3 gap-2">
+              <ToggleGroup
+                type="single"
+                value={theme}
+                onValueChange={(value) => value && setTheme(value)}
+                className="grid grid-cols-3 gap-2"
+              >
                 {themeOptions.map((opt) => (
-                  <button
+                  <ToggleGroupItem
                     key={opt.value}
-                    onClick={() => setTheme(opt.value)}
+                    value={opt.value}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-colors",
-                      theme === opt.value
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                      "flex flex-col items-center gap-1.5 p-3 h-auto rounded-lg border",
+                      "data-[state=on]:border-primary data-[state=on]:bg-primary/5",
+                      "data-[state=off]:border-border"
                     )}
                   >
                     <opt.icon
@@ -203,28 +202,32 @@ export default function SettingsPage() {
                     >
                       {opt.label}
                     </span>
-                  </button>
+                  </ToggleGroupItem>
                 ))}
-              </div>
+              </ToggleGroup>
             </div>
 
             <div className="border-t border-border pt-4 space-y-1">
               <SettingItem
+                id="compact-mode"
                 title="Compact mode"
                 description="Reduce spacing and padding"
               >
-                <Toggle
+                <Switch
+                  id="compact-mode"
                   checked={settings.compactMode}
-                  onChange={(v) => updateSetting("compactMode", v)}
+                  onCheckedChange={(v) => updateSetting("compactMode", v)}
                 />
               </SettingItem>
               <SettingItem
+                id="keyboard-hints"
                 title="Show keyboard hints"
                 description="Display shortcut reminders"
               >
-                <Toggle
+                <Switch
+                  id="keyboard-hints"
                   checked={settings.showKeyboardHints}
-                  onChange={(v) => updateSetting("showKeyboardHints", v)}
+                  onCheckedChange={(v) => updateSetting("showKeyboardHints", v)}
                 />
               </SettingItem>
             </div>
@@ -244,24 +247,29 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-1">
             <SettingItem
+              id="push-notifications"
               title="Push notifications"
               description="Get notified about task reminders"
             >
-              <Toggle
+              <Switch
+                id="push-notifications"
                 checked={settings.pushNotifications}
-                onChange={(v) => updateSetting("pushNotifications", v)}
+                onCheckedChange={(v) => updateSetting("pushNotifications", v)}
               />
             </SettingItem>
             <SettingItem
+              id="email-digest"
               title="Email digest"
               description="Daily summary of your tasks"
             >
-              <Toggle
+              <Switch
+                id="email-digest"
                 checked={settings.emailDigest}
-                onChange={(v) => updateSetting("emailDigest", v)}
+                onCheckedChange={(v) => updateSetting("emailDigest", v)}
               />
             </SettingItem>
             <SettingItem
+              id="sound-effects"
               title="Sound effects"
               description="Play sound on task completion"
             >
@@ -273,9 +281,10 @@ export default function SettingsPage() {
                 >
                   <Volume2 className="size-4" />
                 </button>
-                <Toggle
+                <Switch
+                  id="sound-effects"
                   checked={settings.soundEffects}
-                  onChange={(v) => updateSetting("soundEffects", v)}
+                  onCheckedChange={(v) => updateSetting("soundEffects", v)}
                 />
               </div>
             </SettingItem>
@@ -298,40 +307,56 @@ export default function SettingsPage() {
               <label className="text-sm font-medium">
                 Default task duration
               </label>
-              <select
+              <Select
                 value={settings.defaultDuration}
-                onChange={(e) =>
-                  updateSetting("defaultDuration", e.target.value)
+                onValueChange={(value) =>
+                  updateSetting("defaultDuration", value)
                 }
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
               >
-                <option value="15">15 minutes</option>
-                <option value="30">30 minutes</option>
-                <option value="60">1 hour</option>
-                <option value="120">2 hours</option>
-              </select>
+                <SelectTrigger className="mt-1.5 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="60">1 hour</SelectItem>
+                  <SelectItem value="120">2 hours</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Week starts on</label>
-              <select
+              <Select
                 value={settings.weekStart}
-                onChange={(e) => updateSetting("weekStart", e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                onValueChange={(value) =>
+                  updateSetting("weekStart", value as "sunday" | "monday")
+                }
               >
-                <option value="sunday">Sunday</option>
-                <option value="monday">Monday</option>
-              </select>
+                <SelectTrigger className="mt-1.5 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sunday">Sunday</SelectItem>
+                  <SelectItem value="monday">Monday</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Time format</label>
-              <select
+              <Select
                 value={settings.timeFormat}
-                onChange={(e) => updateSetting("timeFormat", e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                onValueChange={(value) =>
+                  updateSetting("timeFormat", value as "12h" | "24h")
+                }
               >
-                <option value="12h">12-hour (AM/PM)</option>
-                <option value="24h">24-hour</option>
-              </select>
+                <SelectTrigger className="mt-1.5 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12h">12-hour (AM/PM)</SelectItem>
+                  <SelectItem value="24h">24-hour</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -350,43 +375,57 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium">Language</label>
-              <select
+              <Select
                 value={settings.language}
-                onChange={(e) => updateSetting("language", e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                onValueChange={(value) => updateSetting("language", value)}
               >
-                <option value="en">English</option>
-                <option value="vi">Tiếng Việt</option>
-                <option value="ja">日本語</option>
-                <option value="ko">한국어</option>
-                <option value="zh">中文</option>
-              </select>
+                <SelectTrigger className="mt-1.5 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="vi">Tiếng Việt</SelectItem>
+                  <SelectItem value="ja">日本語</SelectItem>
+                  <SelectItem value="ko">한국어</SelectItem>
+                  <SelectItem value="zh">中文</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Timezone</label>
-              <select
+              <Select
                 value={settings.timezone}
-                onChange={(e) => updateSetting("timezone", e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                onValueChange={(value) => updateSetting("timezone", value)}
               >
-                <option value="GMT+7">(GMT+7) Ho Chi Minh City</option>
-                <option value="GMT+8">(GMT+8) Singapore</option>
-                <option value="GMT+9">(GMT+9) Tokyo</option>
-                <option value="GMT-8">(GMT-8) Los Angeles</option>
-                <option value="GMT-5">(GMT-5) New York</option>
-              </select>
+                <SelectTrigger className="mt-1.5 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GMT+7">
+                    (GMT+7) Ho Chi Minh City
+                  </SelectItem>
+                  <SelectItem value="GMT+8">(GMT+8) Singapore</SelectItem>
+                  <SelectItem value="GMT+9">(GMT+9) Tokyo</SelectItem>
+                  <SelectItem value="GMT-8">(GMT-8) Los Angeles</SelectItem>
+                  <SelectItem value="GMT-5">(GMT-5) New York</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="text-sm font-medium">Date format</label>
-              <select
+              <Select
                 value={settings.dateFormat}
-                onChange={(e) => updateSetting("dateFormat", e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                onValueChange={(value) => updateSetting("dateFormat", value)}
               >
-                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-              </select>
+                <SelectTrigger className="mt-1.5 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
+                  <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
+                  <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -422,15 +461,36 @@ export default function SettingsPage() {
                 <Upload className="size-4" />
                 Import Settings
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={resetSettings}
-                className="gap-2 text-destructive hover:text-destructive"
-              >
-                <Trash2 className="size-4" />
-                Reset to Default
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="size-4" />
+                    Reset to Default
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Reset Settings</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to reset all settings to default?
+                      This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={resetSettings}
+                      className="bg-destructive text-white hover:bg-destructive/90"
+                    >
+                      Reset
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </CardContent>
         </Card>

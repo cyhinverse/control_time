@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -85,17 +86,15 @@ export default async function ProfilePage() {
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center">
               {/* Avatar */}
-              <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-                {session.user.image ? (
-                  <img
-                    src={session.user.image}
-                    alt={session.user.name || "User"}
-                    className="size-20 rounded-full object-cover"
-                  />
-                ) : (
+              <Avatar className="size-20">
+                <AvatarImage
+                  src={session.user.image || undefined}
+                  alt={session.user.name || "User"}
+                />
+                <AvatarFallback className="bg-primary/10">
                   <User2 className="size-10 text-primary" />
-                )}
-              </div>
+                </AvatarFallback>
+              </Avatar>
 
               {/* Name & Email */}
               <div className="mt-4 space-y-1">

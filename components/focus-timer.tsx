@@ -15,6 +15,7 @@ import {
   Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 interface FocusTimerProps {
@@ -135,37 +136,26 @@ export function FocusTimer({ taskTitle, onComplete }: FocusTimerProps) {
   return (
     <div className="flex flex-col items-center">
       {/* Mode Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-muted/50 rounded-lg mb-6">
-        {(["focus", "shortBreak", "longBreak"] as TimerMode[]).map((m) => (
-          <button
-            key={m}
-            onClick={() => switchMode(m)}
-            className={cn(
-              "px-4 py-2 rounded-md text-sm font-medium transition-all",
-              mode === m
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {m === "focus" ? (
-              <span className="flex items-center gap-1.5">
-                <Target className="size-4" />
-                Focus
-              </span>
-            ) : m === "shortBreak" ? (
-              <span className="flex items-center gap-1.5">
-                <Coffee className="size-4" />
-                Short
-              </span>
-            ) : (
-              <span className="flex items-center gap-1.5">
-                <Coffee className="size-4" />
-                Long
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        value={mode}
+        onValueChange={(v) => switchMode(v as TimerMode)}
+        className="mb-6"
+      >
+        <TabsList>
+          <TabsTrigger value="focus" className="gap-1.5">
+            <Target className="size-4" />
+            Focus
+          </TabsTrigger>
+          <TabsTrigger value="shortBreak" className="gap-1.5">
+            <Coffee className="size-4" />
+            Short
+          </TabsTrigger>
+          <TabsTrigger value="longBreak" className="gap-1.5">
+            <Coffee className="size-4" />
+            Long
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       {/* Timer Circle */}
       <div className="relative mb-6">

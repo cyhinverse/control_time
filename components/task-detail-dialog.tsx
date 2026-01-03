@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X,
   Calendar,
   Clock,
   Flag,
@@ -12,12 +11,34 @@ import {
   AlarmClock,
   FileText,
   Check,
-  Sun,
   Sunrise,
   CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 
 interface Task {
@@ -60,17 +81,52 @@ export function TaskDetailDialog({
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || "");
   const [priority, setPriority] = useState(task.priority || "MEDIUM");
-  const [startTime, setStartTime] = useState(
-    task.startTime ? new Date(task.startTime).toISOString().slice(0, 16) : ""
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    task.startTime ? new Date(task.startTime) : undefined
+  );
+  const [selectedTime, setSelectedTime] = useState(
+    task.startTime
+      ? new Date(task.startTime).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        })
+      : "09:00"
   );
   const [isRecurring, setIsRecurring] = useState(task.isRecurring || false);
   const [recurrence, setRecurrence] = useState(task.recurrence || "DAILY");
   const [isSaving, setIsSaving] = useState(false);
-  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+
+  // Reset state when task changes
+  useEffect(() => {
+    setTitle(task.title);
+    setDescription(task.description || "");
+    setPriority(task.priority || "MEDIUM");
+    setSelectedDate(task.startTime ? new Date(task.startTime) : undefined);
+    setSelectedTime(
+      task.startTime
+        ? new Date(task.startTime).toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        : "09:00"
+    );
+    setIsRecurring(task.isRecurring || false);
+    setRecurrence(task.recurrence || "DAILY");
+  }, [task]);
 
   async function handleSave() {
     setIsSaving(true);
     try {
+      let finalDate: string | null = null;
+      if (selectedDate) {
+        const [hours, minutes] = selectedTime.split(":").map(Number);
+        const date = new Date(selectedDate);
+        date.setHours(hours, minutes, 0, 0);
+        finalDate = date.toISOString();
+      }
+
       await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -78,8 +134,8 @@ export function TaskDetailDialog({
           title,
           description: description || null,
           priority,
-          startTime: startTime ? new Date(startTime).toISOString() : null,
-          dueDate: startTime ? new Date(startTime).toISOString() : null,
+          startTime: finalDate,
+          dueDate: finalDate,
           isRecurring,
           recurrence: isRecurring ? recurrence : null,
         }),
@@ -129,221 +185,260 @@ export function TaskDetailDialog({
   ];
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
-          />
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Task Details</DialogTitle>
+        </DialogHeader>
 
-          {/* Dialog */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg"
-          >
-            <div className="bg-background border border-border rounded-xl shadow-2xl overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                <h2 className="text-lg font-semibold">Task Details</h2>
-                <button
-                  onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  <X className="size-5" />
-                </button>
-              </div>
+        <div className="space-y-5 py-4">
+          {/* Title */}
+          <div className="space-y-2">
+            <Label htmlFor="task-title">Title</Label>
+            <Input
+              id="task-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Task title..."
+              className="text-base"
+            />
+          </div>
 
-              {/* Content */}
-              <div className="p-6 space-y-5">
-                {/* Title */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Title
-                  </label>
-                  <Input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Task title..."
-                    className="text-base"
-                  />
-                </div>
+          {/* Description */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="task-description"
+              className="flex items-center gap-2"
+            >
+              <FileText className="size-4" />
+              Description
+            </Label>
+            <Textarea
+              id="task-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add a description..."
+              rows={3}
+              className="resize-none"
+            />
+          </div>
 
-                {/* Description */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <FileText className="size-4" />
-                    Description
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Add a description..."
-                    rows={3}
+          {/* Date & Time */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Calendar className="size-4" />
+              Schedule
+            </Label>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
                     className={cn(
-                      "w-full px-3 py-2 text-sm rounded-lg",
-                      "border border-border bg-background",
-                      "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
-                      "resize-none"
+                      "flex-1 justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
                     )}
+                  >
+                    <CalendarDays className="mr-2 size-4" />
+                    {selectedDate ? (
+                      selectedDate.toLocaleDateString("en-US", {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarPicker
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
                   />
-                </div>
-
-                {/* Date & Time */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Calendar className="size-4" />
-                    Schedule
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="datetime-local"
-                      value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
-                      className={cn(
-                        "flex-1 px-3 py-2 text-sm rounded-lg",
-                        "border border-border bg-background",
-                        "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                      )}
-                    />
-                    <div className="relative">
+                </PopoverContent>
+              </Popover>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-24 justify-start gap-2"
+                  >
+                    <Clock className="size-4" />
+                    {selectedTime}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-2" align="start">
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      "06:00",
+                      "07:00",
+                      "08:00",
+                      "09:00",
+                      "10:00",
+                      "11:00",
+                      "12:00",
+                      "13:00",
+                      "14:00",
+                      "15:00",
+                      "16:00",
+                      "17:00",
+                      "18:00",
+                      "19:00",
+                      "20:00",
+                      "21:00",
+                      "22:00",
+                      "23:00",
+                    ].map((time) => (
                       <Button
-                        variant="outline"
+                        key={time}
+                        variant={selectedTime === time ? "default" : "ghost"}
                         size="sm"
-                        onClick={() => setShowSnoozeMenu(!showSnoozeMenu)}
-                        className="gap-1.5"
+                        className="text-xs"
+                        onClick={() => setSelectedTime(time)}
                       >
-                        <AlarmClock className="size-4" />
-                        Snooze
+                        {time}
                       </Button>
-
-                      {/* Snooze Menu */}
-                      <AnimatePresence>
-                        {showSnoozeMenu && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="absolute right-0 top-full mt-1 w-48 bg-background border border-border rounded-lg shadow-lg z-10 py-1"
-                          >
-                            {SNOOZE_OPTIONS.map((option) => (
-                              <button
-                                key={option.label}
-                                onClick={() => {
-                                  handleSnooze(option);
-                                  setShowSnoozeMenu(false);
-                                }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
-                              >
-                                <option.icon className="size-4 text-muted-foreground" />
-                                {option.label}
-                              </button>
-                            ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Priority */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Flag className="size-4" />
-                    Priority
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {priorityOptions.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setPriority(opt.value)}
-                        className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all",
-                          priority === opt.value
-                            ? opt.color
-                            : "text-muted-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Flag className="size-3.5" />
-                        {opt.label}
-                      </button>
                     ))}
                   </div>
-                </div>
-
-                {/* Recurring */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Repeat className="size-4" />
-                    Repeat
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setIsRecurring(!isRecurring)}
-                      className={cn(
-                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                        isRecurring ? "bg-primary" : "bg-muted"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "inline-block size-4 transform rounded-full bg-white transition-transform",
-                          isRecurring ? "translate-x-6" : "translate-x-1"
-                        )}
-                      />
-                    </button>
-                    {isRecurring && (
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-1"
-                      >
-                        {RECURRENCE_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            onClick={() => setRecurrence(opt.value)}
-                            className={cn(
-                              "px-2.5 py-1 rounded text-xs transition-colors",
-                              recurrence === opt.value
-                                ? "bg-primary text-primary-foreground"
-                                : "text-muted-foreground hover:bg-muted"
-                            )}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
+                  <div className="mt-2 pt-2 border-t">
+                    <Input
+                      type="time"
+                      value={selectedTime}
+                      onChange={(e) => setSelectedTime(e.target.value)}
+                      className="w-full text-sm"
+                    />
                   </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border bg-muted/30">
-                <Button variant="outline" onClick={onClose}>
-                  Cancel
+                </PopoverContent>
+              </Popover>
+              {selectedDate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedDate(undefined);
+                    setSelectedTime("09:00");
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Clear
                 </Button>
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? (
-                    "Saving..."
-                  ) : (
-                    <>
-                      <Check className="size-4 mr-1.5" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </div>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5">
+                    <AlarmClock className="size-4" />
+                    Snooze
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {SNOOZE_OPTIONS.map((option) => (
+                    <DropdownMenuItem
+                      key={option.label}
+                      onClick={() => handleSnooze(option)}
+                      className="gap-2 cursor-pointer"
+                    >
+                      <option.icon className="size-4" />
+                      {option.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Flag className="size-4" />
+              Priority
+            </Label>
+            <ToggleGroup
+              type="single"
+              value={priority}
+              onValueChange={(value) => value && setPriority(value)}
+              className="justify-start"
+            >
+              <ToggleGroupItem
+                value="HIGH"
+                className="gap-1.5 px-3 data-[state=on]:text-red-500 data-[state=on]:bg-red-500/10"
+              >
+                <Flag className="size-3.5" />
+                High
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="MEDIUM"
+                className="gap-1.5 px-3 data-[state=on]:text-orange-500 data-[state=on]:bg-orange-500/10"
+              >
+                <Flag className="size-3.5" />
+                Medium
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="LOW"
+                className="gap-1.5 px-3 data-[state=on]:text-blue-500 data-[state=on]:bg-blue-500/10"
+              >
+                <Flag className="size-3.5" />
+                Low
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
+          {/* Recurring */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Repeat className="size-4" />
+              Repeat
+            </Label>
+            <div className="flex items-center gap-3">
+              <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+              <AnimatePresence>
+                {isRecurring && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                  >
+                    <ToggleGroup
+                      type="single"
+                      value={recurrence}
+                      onValueChange={(value) => value && setRecurrence(value)}
+                      size="sm"
+                    >
+                      {RECURRENCE_OPTIONS.map((opt) => (
+                        <ToggleGroupItem
+                          key={opt.value}
+                          value={opt.value}
+                          className="text-xs px-2.5"
+                        >
+                          {opt.label}
+                        </ToggleGroupItem>
+                      ))}
+                    </ToggleGroup>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              "Saving..."
+            ) : (
+              <>
+                <Check className="size-4 mr-1.5" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

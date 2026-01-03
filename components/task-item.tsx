@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Calendar,
   Clock,
@@ -248,9 +249,10 @@ export function TaskItem({ task, isDragging }: TaskItemProps) {
           task.description) && (
           <div className="flex items-center gap-2 mt-1">
             {task.priority && (
-              <span
+              <Badge
+                variant="outline"
                 className={cn(
-                  "flex items-center gap-1 text-xs px-1.5 py-0.5 rounded",
+                  "gap-1 text-xs font-normal",
                   priorityConfig[task.priority as keyof typeof priorityConfig]
                     ?.bg,
                   priorityConfig[task.priority as keyof typeof priorityConfig]
@@ -262,13 +264,16 @@ export function TaskItem({ task, isDragging }: TaskItemProps) {
                   priorityConfig[task.priority as keyof typeof priorityConfig]
                     ?.label
                 }
-              </span>
+              </Badge>
             )}
             {task.isRecurring && (
-              <span className="flex items-center gap-1 text-xs text-purple-500 bg-purple-500/10 px-1.5 py-0.5 rounded">
+              <Badge
+                variant="outline"
+                className="gap-1 text-xs font-normal text-purple-500 bg-purple-500/10 border-purple-500/20"
+              >
                 <Repeat className="size-3" />
                 {task.recurrence?.toLowerCase()}
-              </span>
+              </Badge>
             )}
             {task.description && (
               <span className="text-muted-foreground">

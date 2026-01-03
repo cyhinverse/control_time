@@ -6,6 +6,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, Edit3, Check, X, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
 interface Label {
@@ -83,8 +94,6 @@ export function LabelsView({ labels: initialLabels }: LabelsViewProps) {
   }
 
   async function deleteLabel(id: string) {
-    if (!confirm("Delete this label? Tasks won't be deleted.")) return;
-
     setIsPending(true);
     try {
       await fetch(`/api/labels/${id}`, { method: "DELETE" });
@@ -238,12 +247,31 @@ export function LabelsView({ labels: initialLabels }: LabelsViewProps) {
                     >
                       <Edit3 className="size-4" />
                     </button>
-                    <button
-                      onClick={() => deleteLabel(label.id)}
-                      className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="p-1.5 rounded hover:bg-red-500/10 text-muted-foreground hover:text-red-500">
+                          <Trash2 className="size-4" />
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Label</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete &quot;{label.name}
+                            &quot;? Tasks won&apos;t be deleted.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteLabel(label.id)}
+                            className="bg-destructive text-white hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </>
               )}
